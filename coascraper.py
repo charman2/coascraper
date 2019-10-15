@@ -16,11 +16,20 @@ import pandas as pd
 import requests
 import re
 from googlesearch import search
-from pybliometrics.scopus import AuthorRetrieval, ContentAffiliationRetrieval
+from pybliometrics.scopus import AuthorRetrieval, ContentAffiliationRetrieval, config
+from pybliometrics.scopus.exception import Scopus429Error
 
 # replace the 'x' with your values
 API_KEY = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 Author_id = 'xxxxxxxxxxx'
+
+# get my publications
+try:
+    Documents = AuthorRetrieval(Author_id).get_documents()
+except Scopus429Error:
+    # first time pybliometrics is run, it sets the API_KEY
+    config["Authentication"]["APIKey"] = API_KEY
+    Documents = AuthorRetrieval(Author_id).get_documents()
 
 # How many googled pages to scrape looking for email addresses
 num_url_search_email = 10
@@ -31,8 +40,7 @@ today = datetime.datetime.now()
 # prepare a dataframe to hold the results
 data = pd.DataFrame(columns=['Name', 'Organizational Affiliation', 'Optional  (email, Department)', 'Last Active'])
 
-# get my publications, and loop over them
-Documents = Author = AuthorRetrieval(Author_id).get_documents()
+# Loop over documents
 for doc in Documents:
 
     # check whether the publication date is within the last 48 months
@@ -47,32 +55,44 @@ for doc in Documents:
 
                 # get their info from scopus
                 CoAuthor = AuthorRetrieval(id)
-                print(CoAuthor)
-                affiliation = ContentAffiliationRetrieval(CoAuthor.affiliation_current)
+                name = '{}, {}'.format(CoAuthor.surname, CoAuthor.given_name)
+                print('')
+                print(f'name:        {name}')
+
+                # get an affiliation with an OrgID (starts with a 6)
+                affil_id = CoAuthor.affiliation_current
+                if affil_id[0] != '6':
+                    affil_id_list = [a for a in CoAuthor.affiliation_history if a[0] == '6']
+                    if len(affil_id_list) > 0:
+                        affil_id = affil_id_list[0]
+                affiliation = ContentAffiliationRetrieval(affil_id)
+                affil_name = affiliation.affiliation_name
+                print(f'affiliation: {affil_name}')
 
                 # google them
-                google_results = search(
-                    ' '.join([CoAuthor.given_name, CoAuthor.surname, affiliation.org_domain]))
-
+                google_results = search(' '.join([CoAuthor.given_name, CoAuthor.surname, affiliation.org_domain]), num=10)
                 # scrape the results, looking for their email address
                 email_list = []
                 for tryurl in range(num_url_search_email):
-                    html = requests.get(next(google_results)).text
+                    url = next(google_results)
+                    html = requests.get(url).text
+                    print(f'  scraping {url}', len(html))
                     # this uses regex to find something like an email address
                     email_list += re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}", html)
                 # keep only those that contain the first three letters of the author's lastname
-                email = ', '.join(list(set([e for e in email_list if CoAuthor.surname[:3].lower() in e.split('@')[0].lower()])))
+                email = ', '.join(
+                    list(set([e for e in email_list if CoAuthor.surname[:3].lower() in e.split('@')[0].lower()])))
                 # if that is removing too many results, comment that line out and uncomment this one
                 # email = ', '.join(list(set([e for e in email_list])))
+                print(f'email:       {email}')
 
                 # add the results to the dataframe
                 data = data.append(pd.DataFrame.from_dict({id: {
-                                                         'Name': '{}, {}'.format(CoAuthor.surname, CoAuthor.given_name),
-                                                         'Organizational Affiliation': '{}, {}'.format(affiliation.org_domain, affiliation.affiliation_name),
-                                                         'Optional  (email, Department)': email,
-                                                         'Last Active': coverDate
-                                                         }}, orient='index'))
+                    'Name': name,
+                    'Organizational Affiliation': '{}, {}'.format(affiliation.org_domain, affil_name),
+                    'Optional  (email, Department)': email,
+                    'Last Active': coverDate
+                }}, orient='index'))
 
 # output the results as an excel file
 data.to_excel('coascraper.xlsx')
-
