@@ -2,9 +2,10 @@
 
 A simple python script for gathering the info for the NSF Collaborators and Other Affiliations Information form (https://www.nsf.gov/bfa/dias/policy/coa.jsp)
 
-Uses pybliometrics to pull data from Scopus (https://pybliometrics.readthedocs.io/en/stable/index.html), and the google search api to find email addresses. Install these with:
+Uses pybliometrics to pull data from Scopus (https://pybliometrics.readthedocs.io/en/stable/index.html), and the google search api and beautiful soup to find email addresses. Install these with:
 ```
 pip install pybliometrics
+pip install beautifulsoup4
 pip install google
 ```
 
