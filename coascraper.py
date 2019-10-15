@@ -19,8 +19,8 @@ from googlesearch import search
 from pybliometrics.scopus import AuthorRetrieval, ContentAffiliationRetrieval
 
 # replace the 'x' with your values
-API_KEY = 'a616165db7e72b99a0f77bcb0167efdd'
-Author_id = '55786568600'
+API_KEY = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+Author_id = 'xxxxxxxxxxx'
 
 # How many googled pages to scrape looking for email addresses
 num_url_search_email = 10
