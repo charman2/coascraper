@@ -6,7 +6,7 @@ Uses pybliometrics to pull data from Scopus (https://pybliometrics.readthedocs.i
 ```
 pip install pybliometrics
 pip install google
-``
+```
 
 You will need to obtain an Elsevier API key from here: https://dev.elsevier.com/apikey/manage. This is a 32 character
 string.
