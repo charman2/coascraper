@@ -71,10 +71,10 @@ for doc in Documents:
 
                 # google them
                 google_results = search(' '.join(['email', CoAuthor.given_name, CoAuthor.surname, affiliation.org_domain]),
-                                        num=num_url_search_email, only_standard=True, pause=5.)
+                                        num=num_url_search_email, only_standard=True, pause=10.)
                 # scrape the results, looking for their email address
                 email_list = []
-                for url in google_results:
+                for count, url in enumerate(google_results):
                     if not url[-3:]=='pdf':
                         print(f'  scraping {url}')
                         try:
@@ -87,10 +87,10 @@ for doc in Documents:
                             # if that is removing too many valid results, comment that line out and uncomment this one
                             # email = list(set([e for e in email_list]))
                             # stop if you have at least 2 unique emails
-                            if len(email_list)>1:
-                                break
                         except:
                             pass
+                        if len(email_list)>1 or count>=num_url_search_email:
+                            break
                 email = ', '.join(email_list)
                 print(f'email:       {email}')
 
