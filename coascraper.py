@@ -54,53 +54,69 @@ for doc in Documents:
             if (id != Author_id) and ((id not in data.index) or (data['Last Active'].loc[id] < coverDate)):
 
                 # get their info from scopus
-                CoAuthor = AuthorRetrieval(id)
-                name = '{}, {}'.format(CoAuthor.surname, CoAuthor.given_name)
-                print('')
-                print(f'name:        {name}')
+                try:
+                    CoAuthor = AuthorRetrieval(id)
+                except:
+                    CoAuthor = None
+                if CoAuthor is None:
+                    print('Could not retrieve info for Author ID: {id}'.format(id=id))
+                else:
+                    name = '{}, {}'.format(CoAuthor.surname, CoAuthor.given_name)
+                    print('')
+                    print(f'name:        {name}')
 
-                # get an affiliation with an OrgID (starts with a 6)
-                affil_id = CoAuthor.affiliation_current
-                if affil_id[0] != '6' and CoAuthor.affiliation_history is not None:
-                    affil_id_list = [a for a in CoAuthor.affiliation_history if a[0] == '6']
-                    if len(affil_id_list) > 0:
-                        affil_id = affil_id_list[0]
-                affiliation = ContentAffiliationRetrieval(affil_id)
-                affil_name = affiliation.affiliation_name
-                print(f'affiliation: {affil_name}')
+                    # get an affiliation with an OrgID (starts with a 6)
+                    affil_id = CoAuthor.affiliation_current
+                    if affil_id[0] != '6' and CoAuthor.affiliation_history is not None:
+                        affil_id_list = [a for a in CoAuthor.affiliation_history if a[0] == '6']
+                        if len(affil_id_list) > 0:
+                            affil_id = affil_id_list[0]
+                    affiliation = ContentAffiliationRetrieval(affil_id)
+                    affil_name = affiliation.affiliation_name
+                    print(f'affiliation: {affil_name}')
 
-                # google them
-                google_results = search(' '.join(['email', CoAuthor.given_name, CoAuthor.surname, affiliation.org_domain]),
-                                        num=num_url_search_email, only_standard=True, pause=10.)
-                # scrape the results, looking for their email address
-                email_list = []
-                for count, url in enumerate(google_results):
-                    if not url[-3:]=='pdf':
-                        print(f'  scraping {url}')
-                        try:
-                            html = requests.get(url).text
-                            # this uses regex to find something like an email address
-                            scraped_email = re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}", html)
-                            email_list += scraped_email
-                            # keep only unique entries that contain the first three letters of the author's lastname
-                            email_list = list(set([e for e in email_list if CoAuthor.surname[:3].lower() in e.split('@')[0].lower()]))
-                            # if that is removing too many valid results, comment that line out and uncomment this one
-                            # email = list(set([e for e in email_list]))
+                    # google them
+                    google_results = search(' '.join(['email', CoAuthor.given_name, CoAuthor.surname, affiliation.org_domain]),
+                                            num=num_url_search_email, only_standard=True, pause=10.)
+
+                    # scrape the results, looking for their email address
+                    email_list = []
+                    for count, url in enumerate(google_results):
+
+                        # Ignore pdfs, they take too long to get and search
+                        if not url[-3:]=='pdf':
+
+                            print(f'  scraping {url}')
+
+                            try:
+                                html = requests.get(url, ).text
+
+                                # this uses regex to find something like an email address
+                                scraped_email = re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}", html)
+                                email_list += scraped_email
+
+                                # keep only unique entries that contain the first three letters of the author's lastname
+                                email_list = list(set([e for e in email_list if CoAuthor.surname[:3].lower() in e.split('@')[0].lower()]))
+                                # if that is removing too many valid results, comment that line out and uncomment this one
+                                # email = list(set([e for e in email_list]))
+
+                            except:
+                                pass
+
                             # stop if you have at least 2 unique emails
-                        except:
-                            pass
-                        if len(email_list)>1 or count>=num_url_search_email:
-                            break
-                email = ', '.join(email_list)
-                print(f'email:       {email}')
+                            if len(email_list)>1 or count>=num_url_search_email:
+                                break
 
-                # add the results to the dataframe
-                data = data.append(pd.DataFrame.from_dict({id: {
-                    'Name': name,
-                    'Organizational Affiliation': '{}, {}'.format(affiliation.org_domain, affil_name),
-                    'Optional  (email, Department)': email,
-                    'Last Active': coverDate
-                }}, orient='index'))
+                    email = ', '.join(email_list)
+                    print(f'email:       {email}')
+
+                    # add the results to the dataframe
+                    data = data.append(pd.DataFrame.from_dict({id: {
+                        'Name': name,
+                        'Organizational Affiliation': '{}, {}'.format(affiliation.org_domain, affil_name),
+                        'Optional  (email, Department)': email,
+                        'Last Active': coverDate
+                    }}, orient='index'))
 
 # output the results as an excel file
 data.to_excel('coascraper.xlsx')
