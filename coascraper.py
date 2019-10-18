@@ -107,6 +107,9 @@ for doc in Documents:
                             if len(email_list)>1 or count>=num_url_search_email:
                                 break
 
+                            # Kludge to avoid the dreaded "HTTP 429 Too Many Requests" error
+                            time.sleep(1.)
+
                     email = ', '.join(email_list)
                     print(f'email:       {email}')
 
