@@ -18,6 +18,7 @@ import re
 from googlesearch import search
 from pybliometrics.scopus import AuthorRetrieval, ContentAffiliationRetrieval, config
 from pybliometrics.scopus.exception import Scopus429Error
+import time
 
 # replace the 'x' with your values
 API_KEY = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
